@@ -1,0 +1,7 @@
+{
+    "/dist/content-scripts/content-scripts.js": "/dist/content-scripts/content-scripts.js",
+    "/dist/js/app.js": "/dist/js/app.js",
+    "/dist/css/index.css": "/dist/css/index.css",
+    "/dist/manifest.json": "/dist/manifest.json",
+    "/dist/popup.html": "/dist/popup.html"
+}

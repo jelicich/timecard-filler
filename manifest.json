@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "version": "1.0.0",
+  "name": "Timecard Filler",
+  "description": "An extension to help you fill in your timecard",
+  "author": "Esteban Jelicich",
+
+  "action": {
+    "default_popup": "popup.html"
+  },
+
+  "content_scripts": [{
+    "matches": [
+      "https://caravelo.personio.de/attendance/employee",
+      "https://caravelo.personio.de/attendance/employee/*"
+    ],
+    "js": ["content-scripts/content-scripts.js"]
+  }],
+
+  "permissions": [
+    "tabs"
+  ]
+}
