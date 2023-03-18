@@ -17,7 +17,30 @@
     "js": ["content-scripts/content-scripts.js"]
   }],
 
+  "background": {
+    "service_worker": "background-scripts/background-scripts.js"
+  },
+
+  "web_accessible_resources": [{
+    "resources": ["web-accessible-resources/web-accessible-resources.js"],
+    "matches": [
+      "https://caravelo.personio.de/*"
+    ]
+  }],
+
   "permissions": [
-    "tabs"
-  ]
+    "tabs",
+    "webRequest",
+    "storage"
+  ],
+  
+  "host_permissions": [
+    "*://caravelo.personio.de/*"
+  ],
+
+  "content_security_policy": {
+    "extension_page":"script-src 'self' 'wasm-unsafe-eval'; object-src 'self'" 
+  },
+
+  "options_page": "options-page.html"
 }

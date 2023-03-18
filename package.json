@@ -19,6 +19,8 @@
     "vue-template-compiler": "^2.6.12"
   },
   "dependencies": {
-    "date-fns": "^2.29.3"
+    "@trevoreyre/autocomplete-vue": "^2.4.1",
+    "date-fns": "^2.29.3",
+    "vue2-datepicker": "^3.11.1"
   }
 }

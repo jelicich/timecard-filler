@@ -1,0 +1,1 @@
+### Resources that can be accessed by web pages or other extensions

@@ -1,7 +1,11 @@
 {
     "/dist/content-scripts/content-scripts.js": "/dist/content-scripts/content-scripts.js",
-    "/dist/js/app.js": "/dist/js/app.js",
+    "/dist/background-scripts/background-scripts.js": "/dist/background-scripts/background-scripts.js",
+    "/dist/web-accessible-resources/web-accessible-resources.js": "/dist/web-accessible-resources/web-accessible-resources.js",
+    "/dist/js/popup/app.js": "/dist/js/popup/app.js",
+    "/dist/js/options-page/app.js": "/dist/js/options-page/app.js",
     "/dist/css/index.css": "/dist/css/index.css",
     "/dist/manifest.json": "/dist/manifest.json",
+    "/dist/options-page.html": "/dist/options-page.html",
     "/dist/popup.html": "/dist/popup.html"
 }

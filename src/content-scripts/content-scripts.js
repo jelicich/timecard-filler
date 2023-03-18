@@ -1,71 +1,84 @@
-import { format } from "date-fns";
-import { wait } from './helpers';
-
-// Selector for the button wrapper that opens the pop up
-const BTN_WRAPPERS_SEL = '.Day-module__day___WFrPD';
-// Selector for the child elements in the button of the days that have been completed already
-const SUBMITED_DAYS_SEL = '[class^="WorkStatus"]';
-// Selector for days off (includes weekends, public holidays and PTO)
-const DAYS_OFF_SEL = '[class~="offDay"]';
-// Selector for today's button wrapper
-const TODAY_SEL = '[data-test-id="today-cell"]';
-// Selector for button wrapper (replace the token with the date)
-const BTN_WRAPPER_SEL = '[data-test-id="day_{DATE}"]';
-// Selector for button (BTN_WRAPPER_SEL children)
-const BTN_SEL = 'button[data-test-id="day-cell-action-button"]';
-// Selector for the work hours field section
-const WORK_SECTION_SEL = '[data-test-id="work-entry"]';
-// Selector for the lunch hours field section
-const LUNCH_SECTION_SEL = '[data-test-id="break-entry"]';
-// Selector for start range input
-const START_RANGE_SEL = '[data-test-id="timerange-start"]';
-// Selector for end range input
-const END_RANGE_SEL = '[data-test-id="timerange-end"]';
-// Selector for hour in dropdown (replace token)
-const HOUR_SEL = '[title="{HOUR}"]';
-// Selector for the save button
-const SAVE_BTN_SEL = '[data-test-id="day-entry-save"]';
+import { format, startOfMonth, addMonths } from "date-fns";
+import { wait, getElement, injectScript } from './helpers';
+import { SELECTORS as S, TOKENS, KEYWORDS, IDS } from "./constants";
+import { MESSAGES, DATE_FORMATS, PATHS, ERRORS, STORAGE_KEYS } from "../constants";
 
 class ContentScript {
+  // An object mapping a message to a callback
+  listenersMap = {
+    [MESSAGES.START_FILL_PROCESS]: this.startFillProcess.bind(this),
+    [MESSAGES.GET_CURRENT_MONTH]: this.getPopupDateLimits.bind(this)
+  };
+
   constructor() {
     this.setListeners();
-    console.log('content-script');
+    this.injectResources();
+
+    console.info('Timecard Filler injected');
   }
   
   setListeners() {
+    // Listen for messages (background and popup)
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      console.log(request, sender, sendResponse);
-      if(request.message === 'start') {
-        this.startFillProcess(request.payload);
-      }
+      if(this.listenersMap[request.message]) {
+        this.listenersMap[request.message](request, sendResponse);
+        return true; // Let chrome know the response is async
+      };
     });
+
+    // Listen for employee ID from web accessible resources
+    window.addEventListener('message', this.handleWindowMessage);
+  }
+
+  injectResources() {
+    injectScript(PATHS.WEB_ACCESSIBLE_RESOURCES, 'body', IDS.INJECT);
   }
 
   /**
    * Iterates the payload to filter valid dates and fill the form
    * @param {object} payload 
    */
-  startFillProcess(payload) {
-    console.log('start fill!', payload);
-    const today = format(new Date(), 'yyyy-MM-dd');
-    payload.forEach(async (timecardData) => {
-      const selector = timecardData.dateString === today ?
-        TODAY_SEL : BTN_WRAPPER_SEL.replace('{DATE}', timecardData.dateString);
-      
-      const btnWrapper = document.querySelector(selector);
-      if(this.isValidDate(btnWrapper)) {
-        await this.fillTimecard(btnWrapper, timecardData);
+  async startFillProcess({ payload }, callback) {
+    const today = format(new Date(), DATE_FORMATS.ISO_DATE);
+    // Save loading status in case popup is closed
+    await chrome.storage.sync.set({[STORAGE_KEYS.IS_LOADING]: true });
+
+    try {
+      for(let i = 0; i < payload.length; i++) {
+        const timecardData = payload[i];
+        const selector = timecardData.dateString === today ?
+          S.TODAY_SEL : S.BTN_WRAPPER_SEL.replace(TOKENS.DATE, timecardData.dateString);
+        
+        const btnWrapper = getElement(selector);
+  
+        if(this.isValidDate(btnWrapper)) {
+          await this.fillTimecard(btnWrapper, timecardData);
+        }
       }
-    });
+
+      callback({
+        result: MESSAGES.SUCCESS
+      })
+    } catch(e) {
+      callback({
+        result: MESSAGES.FAILURE,
+        info: e
+      })
+    } finally {
+      await chrome.storage.sync.set({[STORAGE_KEYS.IS_LOADING]: false });
+    }
   }
 
   /**
    * Checks whether the given btnWrapper contains a button for a valid date
-   * (business days) Will be valid when it does not have children with submited o days off sel
+   * (business days) Will be valid when it does not have children with submited or days off sel
    * @param {Node} btnWrapper 
    */
   isValidDate(btnWrapper) {
-    return !btnWrapper.querySelectorAll(`${SUBMITED_DAYS_SEL}, ${DAYS_OFF_SEL}`).length;
+    const btnInner = getElement(S.BTN_INNER_SEL, btnWrapper);
+    const isDayOff = [...btnInner.classList].join().indexOf(KEYWORDS.OFF_DAY) >= 0;
+    const isCompleted = getElement(`${S.SUBMITED_DAYS_SEL}`, btnWrapper)?.length;
+    return !isCompleted && !isDayOff;
   }
 
   /**
@@ -74,27 +87,33 @@ class ContentScript {
    * @param {object} data 
    */
   async fillTimecard(btnWrapper, data) {
-    const timecardBtn = btnWrapper.querySelector(BTN_SEL);
+    const timecardBtn = btnWrapper.querySelector(S.BTN_SEL);
     // Open the modal
     timecardBtn.click();
     // TODO: investigate how to know when pop up is open instead of waiting random time
     await wait(500);
 
     // Fill fields
-    const workFromInput = document.querySelector(`${WORK_SECTION_SEL} ${START_RANGE_SEL}`);
-    const workToInput = document.querySelector(`${WORK_SECTION_SEL} ${END_RANGE_SEL}`);
-    const lunchFromInput = document.querySelector(`${LUNCH_SECTION_SEL} ${START_RANGE_SEL}`);
-    const lunchToInput = document.querySelector(`${LUNCH_SECTION_SEL} ${END_RANGE_SEL}`);
+    const workFromInput = getElement(`${S.WORK_SECTION_SEL} ${S.START_RANGE_SEL}`);
+    const workToInput = getElement(`${S.WORK_SECTION_SEL} ${S.END_RANGE_SEL}`);
+    const lunchFromInput = getElement(`${S.LUNCH_SECTION_SEL} ${S.START_RANGE_SEL}`);
+    const lunchToInput = getElement(`${S.LUNCH_SECTION_SEL} ${S.END_RANGE_SEL}`);
 
     // need to mimic user behavior for personio to update the values
     this.simulateUserInput(workFromInput, data.startingWorkTime);
     this.simulateUserInput(workToInput, data.endingWorkTime)
-    this.simulateUserInput(lunchFromInput, data.startingLunchTime);
-    this.simulateUserInput(lunchToInput, data.endingLunchTime);
+    data.startingLunchTime && this.simulateUserInput(lunchFromInput, data.startingLunchTime);
+    data.endingLunchTime && this.simulateUserInput(lunchToInput, data.endingLunchTime);
 
-    // TODO: submit and continue
-    const saveBtn = document.querySelector(SAVE_BTN_SEL);
+    const saveBtn = getElement(S.SAVE_BTN_SEL);
+    // TODO: #TEST-01 remove these 2 lines, only for testing
+    getElement(S.TMP).click();
+    const savePromiseMonitor = this.waitForRequestToFinish();
     saveBtn.click();
+    await savePromiseMonitor;
+    
+    // TODO: #TEST-01 remove only for testing, close the popup
+    getElement(S.TMP2).click();
   }
 
   /**
@@ -106,36 +125,62 @@ class ContentScript {
   simulateUserInput(element, value) {
     element.click();
     // find dropdown item
-    const hourEl = document.querySelector(HOUR_SEL.replace('{HOUR}', value));
+    const hourEl = getElement(S.HOUR_SEL.replace(TOKENS.HOUR, value));
     hourEl.click();
   }
 
+  /**
+   * Returns a promise that is resolved whenever the ajax call to save 
+   * the timecard finishes. Communicates with background to monitor ajax reqs
+   * To do so it sets a listener to get messages from background
+   */
+  async waitForRequestToFinish() {
+    return new Promise((resolve, reject) => {
+      // wait for 15" and timeout in case personio hangs
+      const timeout = setTimeout(() => {
+        reject(ERRORS.PERSONIO_TIMEOUT);
+      }, 1000 * 15);
 
-
+      chrome.runtime.onMessage.addListener(async function onFinish(request) {
+        if(request.message === MESSAGES.SAVE_FINISHED) {
+          clearTimeout(timeout);
+          chrome.runtime.onMessage.removeListener(onFinish);
+          
+          resolve();
+        }
+      });
+    });
+  }
 
   /**
-   * Get all button wrappers in the dom (current month)
+   * Checks the current month to send it to the pop up to limit the date picker
+   * Uses the dom to see the current date in a hackish way
+   * Executed when receiving a message from popup
    */
-  // getAllButtons() {
-  //   const btnWrappers = document.querySelectorAll(BTN_WRAPPERS_SEL);
-  //   console.log(btnWrappers);
+  async getPopupDateLimits(request, callback) {
+    // get first wrapper date
+    const wrapperDate = getElement(S.BTNS_WRAPPER_SEL).getAttribute('data-test-id').substr(4);
+    // Check if it's first of month
+    const isFirstOfMonth = new Date(wrapperDate).getDate() === 1
     
-  //   this.filterValidButtons(btnWrappers);
-  // }
+    let date;
+    if(isFirstOfMonth) {
+      date = wrapperDate;
+    } else {
+      const previousMonthDate = startOfMonth(new Date(wrapperDate));
+      const currentMonthDate = addMonths(previousMonthDate, 1);
+      date = format(currentMonthDate, DATE_FORMATS.ISO_DATE);
+    }
+    
+    callback(date);
+  }
 
-  /**
-   * Filter days (remove days off, holiday, etc)
-   * btnWrappers and btns are always the same, we need to find 
-   * specific children elements to filter them
-   * @param {NodeList} btnWrappers 
-   */
-  // filterValidButtons(btnWrappers) {
-  //   const buttons = [];
-  //   for(let i = 0; i < btnWrappers.length; i++) {
-  //     const isInvalid = btnWrappers[i].querySelectorAll(`${SUBMITED_DAYS_SEL}, ${DAYS_OFF_SEL}`);
-  //     !isInvalid && buttons.push(btnWrappers[i]);
-  //   }
-  // }
+  // TODO: do we need this?
+  handleWindowMessage(event) {
+    if(event.data.from === MESSAGES.WEB_ACCESSIBLE_RESOURCES) {
+      // console.log('llego el id:', event.data.data);
+    }
+  }
 }
 
 new ContentScript();
