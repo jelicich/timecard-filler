@@ -1,7 +1,7 @@
 import { format, startOfMonth, addMonths } from "date-fns";
-import { wait, getElement, injectScript } from './helpers';
+import { wait, getElement, injectScript, createNotificationElement } from './helpers';
 import { SELECTORS as S, TOKENS, KEYWORDS, IDS } from "./constants";
-import { MESSAGES, DATE_FORMATS, PATHS, ERRORS, STORAGE_KEYS } from "../constants";
+import { MESSAGES, DATE_FORMATS, PATHS, NOTIFICATIONS, STORAGE_KEYS } from "../constants";
 
 class ContentScript {
   // An object mapping a message to a callback
@@ -13,7 +13,9 @@ class ContentScript {
   constructor() {
     this.setListeners();
     this.injectResources();
-
+    
+    // Turn off loader just in case page was refreshed without finishing
+    chrome.storage.sync.set({[STORAGE_KEYS.IS_LOADING]: false });
     console.info('Timecard Filler injected');
   }
   
@@ -38,7 +40,7 @@ class ContentScript {
    * Iterates the payload to filter valid dates and fill the form
    * @param {object} payload 
    */
-  async startFillProcess({ payload }, callback) {
+  async startFillProcess({ payload }, sendResponse) {
     const today = format(new Date(), DATE_FORMATS.ISO_DATE);
     // Save loading status in case popup is closed
     await chrome.storage.sync.set({[STORAGE_KEYS.IS_LOADING]: true });
@@ -56,14 +58,17 @@ class ContentScript {
         }
       }
 
-      callback({
+      sendResponse({
         result: MESSAGES.SUCCESS
       })
+
+      this.showNotification(NOTIFICATIONS.SUCCESS, NOTIFICATIONS.FILL_PROCESS_SUCCESS);
     } catch(e) {
-      callback({
+      sendResponse({
         result: MESSAGES.FAILURE,
         info: e
       })
+      this.showNotification(NOTIFICATIONS.ERROR, NOTIFICATIONS.FILL_PROCESS_ERROR);
     } finally {
       await chrome.storage.sync.set({[STORAGE_KEYS.IS_LOADING]: false });
     }
@@ -77,7 +82,7 @@ class ContentScript {
   isValidDate(btnWrapper) {
     const btnInner = getElement(S.BTN_INNER_SEL, btnWrapper);
     const isDayOff = [...btnInner.classList].join().indexOf(KEYWORDS.OFF_DAY) >= 0;
-    const isCompleted = getElement(`${S.SUBMITED_DAYS_SEL}`, btnWrapper)?.length;
+    const isCompleted = !!getElement(`${S.SUBMITED_DAYS_SEL}`, btnWrapper);
     return !isCompleted && !isDayOff;
   }
 
@@ -106,14 +111,10 @@ class ContentScript {
     data.endingLunchTime && this.simulateUserInput(lunchToInput, data.endingLunchTime);
 
     const saveBtn = getElement(S.SAVE_BTN_SEL);
-    // TODO: #TEST-01 remove these 2 lines, only for testing
-    getElement(S.TMP).click();
+    
     const savePromiseMonitor = this.waitForRequestToFinish();
     saveBtn.click();
     await savePromiseMonitor;
-    
-    // TODO: #TEST-01 remove only for testing, close the popup
-    getElement(S.TMP2).click();
   }
 
   /**
@@ -136,10 +137,10 @@ class ContentScript {
    */
   async waitForRequestToFinish() {
     return new Promise((resolve, reject) => {
-      // wait for 15" and timeout in case personio hangs
+      // wait for 20" and timeout in case personio hangs
       const timeout = setTimeout(() => {
-        reject(ERRORS.PERSONIO_TIMEOUT);
-      }, 1000 * 15);
+        reject(NOTIFICATIONS.PERSONIO_TIMEOUT);
+      }, 1000 * 20);
 
       chrome.runtime.onMessage.addListener(async function onFinish(request) {
         if(request.message === MESSAGES.SAVE_FINISHED) {
@@ -179,6 +180,24 @@ class ContentScript {
   handleWindowMessage(event) {
     if(event.data.from === MESSAGES.WEB_ACCESSIBLE_RESOURCES) {
       // console.log('llego el id:', event.data.data);
+    }
+  }
+
+  /**
+   * Show a message on personio UI
+   * @param {*} type String 'error' 'success'
+   * @param {*} message String
+   */
+  showNotification(type, message) {
+    const el = createNotificationElement(type, message);
+    document.body.appendChild(el);
+    const timeOut = setTimeout(() => {
+      el.parentElement.removeChild(el);
+    }, 5 * 1000);
+    
+    el.onclick = function() {
+      clearTimeout(timeOut);
+      el.parentElement.removeChild(el)
     }
   }
 }

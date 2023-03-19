@@ -15,7 +15,6 @@ A chrome extension to automate timecard submition
 
 ## TODO
 - Add random starting ending functionality
-- Inject a notification on personio to show when it finishes 
 - Add "load from csv" functionality
 - Nice to have: Add functionality to allow different months submition so it navigates through months
 

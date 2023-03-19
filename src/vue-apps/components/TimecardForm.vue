@@ -248,9 +248,6 @@ export default {
     getHourDifference,
     
     async handleSubmit() {
-      console.log(this.payload);
-      // TODO: test, remove 
-      return;
       const result = await chrome.tabs.sendMessage(this.tabId, { 
         message: MESSAGES.START_FILL_PROCESS,
         payload: this.payload
@@ -271,7 +268,6 @@ export default {
       if(response.result === MESSAGES.FAILURE) {
         // TODO: do something show error
       }
-      console.log('termino, resultado: ', response);
     },
 
     /**
@@ -309,9 +305,7 @@ export default {
      */
     setLoadingWatcher() {
       chrome.storage.onChanged.addListener((changes, area) => {
-        console.log('storage change: ', changes, area);
         if (area === 'sync' && changes[STORAGE_KEYS.IS_LOADING]) {
-          console.log('entra')
           this.isLoading = changes[STORAGE_KEYS.IS_LOADING].newValue;
         }
       });

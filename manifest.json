@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "version": "1.0.0",
   "name": "Timecard Filler",
-  "description": "An extension to help you fill in your timecard",
+  "description": "An extension to help you fill in your timecard in Personio app.",
   "author": "Esteban Jelicich",
 
   "action": {
@@ -11,8 +11,24 @@
 
   "content_scripts": [{
     "matches": [
-      "https://caravelo.personio.de/attendance/employee",
-      "https://caravelo.personio.de/attendance/employee/*"
+      "https://*.personio.com/attendance/employee",
+      "https://*.personio.com/attendance/employee/*",
+      "https://*.personio.eu/attendance/employee",
+      "https://*.personio.eu/attendance/employee/*",
+      "https://*.personio.de/attendance/employee",
+      "https://*.personio.de/attendance/employee/*",
+      "https://*.personio.es/attendance/employee",
+      "https://*.personio.es/attendance/employee/*",
+      "https://*.personio.fr/attendance/employee",
+      "https://*.personio.fr/attendance/employee/*",
+      "https://*.personio.nl/attendance/employee",
+      "https://*.personio.nl/attendance/employee/*",
+      "https://*.personio.it/attendance/employee",
+      "https://*.personio.it/attendance/employee/*",
+      "https://*.personio.ie/attendance/employee",
+      "https://*.personio.ie/attendance/employee/*",
+      "https://*.personio.uk/attendance/employee",
+      "https://*.personio.uk/attendance/employee/*"
     ],
     "js": ["content-scripts/content-scripts.js"]
   }],
@@ -24,7 +40,15 @@
   "web_accessible_resources": [{
     "resources": ["web-accessible-resources/web-accessible-resources.js"],
     "matches": [
-      "https://caravelo.personio.de/*"
+      "https://*.personio.com/*",
+      "https://*.personio.eu/*",
+      "https://*.personio.de/*",
+      "https://*.personio.es/*",
+      "https://*.personio.fr/*",
+      "https://*.personio.nl/*",
+      "https://*.personio.it/*",
+      "https://*.personio.ie/*",
+      "https://*.personio.uk/*"
     ]
   }],
 
@@ -35,7 +59,15 @@
   ],
   
   "host_permissions": [
-    "*://caravelo.personio.de/*"
+    "*://*.personio.com/*",
+    "*://*.personio.eu/*",
+    "*://*.personio.de/*",
+    "*://*.personio.es/*",
+    "*://*.personio.fr/*",
+    "*://*.personio.nl/*",
+    "*://*.personio.it/*",
+    "*://*.personio.ie/*",
+    "*://*.personio.uk/*"
   ],
 
   "content_security_policy": {

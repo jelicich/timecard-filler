@@ -76,10 +76,6 @@ export default {
     }
   },
 
-  mounted() {
-    console.log('value: ', this.value);
-  },
-
   methods: {
     handleChange($event) {
       this.$emit(EVENTS.CHANGE, $event);
@@ -107,7 +103,6 @@ export default {
         }
         this.date = this.innerDate;
         this.handleChange(this.date);
-        console.log('setea date', this.date);
       } else {
         this.innerDate = [date, new Date(NaN)];
       }

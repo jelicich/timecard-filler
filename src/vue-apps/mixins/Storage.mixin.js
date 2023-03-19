@@ -30,7 +30,6 @@ export default {
      */
     async getIntensiveDefaults() {
       const result = await chrome.storage.sync.get([STORAGE_KEYS.INTENSIVE_DEFAULTS]);
-      console.log(result)
       this.setData(result[STORAGE_KEYS.INTENSIVE_DEFAULTS] || null);
     },
 
@@ -39,7 +38,6 @@ export default {
      */
     async getCurrentMonthDefault() {
       const result = await chrome.storage.sync.get([STORAGE_KEYS.CURRENT_MONTH_DEFAULT]);
-      console.log(result)
       this.setData(result[STORAGE_KEYS.CURRENT_MONTH_DEFAULT] || null);
     },
 

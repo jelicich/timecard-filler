@@ -34,13 +34,7 @@ export const SELECTORS = {
   // Selector for hour in dropdown (replace token)
   HOUR_SEL: `[title="${TOKENS.HOUR}"]`,
   // Selector for the save button
-  // SAVE_BTN_SEL: '[data-test-id="day-entry-save"]',
-  // TODO: Remove, only for testing, use "close" instead of submit
-  // SAVE_BTN_SEL: '[data-test-id="day-entry-dialog-close-button"]',
-  SAVE_BTN_SEL: '[data-test-id="month-picker-next-button"]',
-  // TODO: remove only for testing
-  TMP: '[data-test-id="month-picker-previous-button"]',
-  TMP2: '[data-test-id="day-entry-dialog-close-button"]',
+  SAVE_BTN_SEL: '[data-test-id="day-entry-save"]',
 }
 
 export const KEYWORDS = {
