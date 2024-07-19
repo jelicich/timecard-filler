@@ -105,10 +105,10 @@ class ContentScript {
     const lunchToInput = getElement(`${S.LUNCH_SECTION_SEL} ${S.END_RANGE_SEL}`);
 
     // need to mimic user behavior for personio to update the values
-    this.simulateUserInput(workFromInput, data.startingWorkTime);
-    this.simulateUserInput(workToInput, data.endingWorkTime)
-    data.startingLunchTime && this.simulateUserInput(lunchFromInput, data.startingLunchTime);
-    data.endingLunchTime && this.simulateUserInput(lunchToInput, data.endingLunchTime);
+    await this.simulateUserInput(workFromInput, data.startingWorkTime);
+    await this.simulateUserInput(workToInput, data.endingWorkTime)
+    data.startingLunchTime && await this.simulateUserInput(lunchFromInput, data.startingLunchTime);
+    data.endingLunchTime && await this.simulateUserInput(lunchToInput, data.endingLunchTime);
 
     const saveBtn = getElement(S.SAVE_BTN_SEL);
     
@@ -123,8 +123,10 @@ class ContentScript {
    * @param {HTMLElement} element 
    * @param {string} value 
    */
-  simulateUserInput(element, value) {
+  async simulateUserInput(element, value) {
     element.click();
+    // for some reason dropdown is not opening right after click. so wait a bit
+    await wait(250);
     // find dropdown item
     const hourEl = getElement(S.HOUR_SEL.replace(TOKENS.HOUR, value));
     hourEl.click();
